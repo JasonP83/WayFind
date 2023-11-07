@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Touch Screen Image</title>
+<style>
+  body, html {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background-color: #FCFCFC; /* Light grey background */
+  }
+  .container {
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    touch-action: none; /* Disable default touch actions to handle them manually */
+  }
+  #interactiveImage {
+    max-width: none; /* Allows image to be larger than its parent */
+    touch-action: none; /* Disable default touch actions to handle them manually */
+    transition: transform 0.3s ease; /* Smooth out the transform changes */
+  }
+  #resetButton {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    z-index: 10;
+    padding: 10px 20px;
+    font-size: 16px;
+    color: #FFFFFF;
+    background-color: #007BFF;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <img id="interactiveImage" src="You Are Here (1).png" alt="You Are Here">
+  <button id="resetButton" onclick="resetImage()">Reset</button>
+</div>
+
+<script>
+  let img = document.getElementById('interactiveImage');
+  let scale = 1;
+  let translateX = 0;
+  let translateY = 0;
+  let resetTimeout;
+
+  function setTransform() {
+    img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+  }
+
+  function onTouchMove(e) {
+    e.preventDefault();
+    if (e.touches.length === 2) {
+      // For pinch zoom
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const zoom = calculatePinchDistance(touch1, touch2) / lastDistance;
+      scale *= zoom;
+      scale = Math.max(1, Math.min(scale, 4)); // limit scale between 1 and 4
+      lastDistance = calculatePinchDistance(touch1, touch2);
+      setTransform();
+    } else if (e.touches.length === 1) {
+      // For pan
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - lastTouchX;
+      const deltaY = touch.clientY - lastTouchY;
+      translateX += deltaX;
+      translateY += deltaY;
+      lastTouchX = touch.clientX;
+      lastTouchY = touch.clientY;
+      setTransform();
+    }
+  }
+
+  function onTouchEnd() {
+    // Reset timer after interaction
+    clearTimeout(resetTimeout);
+    resetTimeout = setTimeout(resetImage, 60000);
+  }
+
+  function onTouchStart(e) {
+    clearTimeout(resetTimeout);
+    if (e.touches.length === 1) {
+      // Starting points for pan
+      lastTouchX = e.touches[0].clientX;
+      lastTouchY = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+      // Starting distance for pinch zoom
+      lastDistance = calculatePinchDistance(e.touches[0], e.touches[1]);
+    }
+  }
+
+  function calculatePinchDistance(touch1, touch2) {
+    return Math.sqrt(Math.pow(touch1.clientX - touch2.clientX, 2) + Math.pow(touch1.clientY - touch2.clientY, 2));
+  }
+
+  function resetImage() {
+    scale = 1;
+    translateX = 0;
+    translateY = 0;
+    setTransform();
+  }
+
+  img.addEventListener('touchmove', onTouchMove, { passive: false });
+  img.addEventListener('touchend', onTouchEnd);
+  img.addEventListener('touchcancel', onTouchEnd);
+  img.addEventListener('touchstart', onTouchStart, { passive: false });
+
+  window.onload = function () {
+    // Initial setup of image position and scale
+    img.onload = function() {
+      resetImage();
+    };
+    if (img.complete) img.onload();
+
+    // Set timeout to reset image after 1 minute of inactivity
+    resetTimeout = setTimeout(resetImage, 60000);
+  };
+</script>
+
+</body>
+</html>
